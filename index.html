@@ -1,0 +1,3038 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>资质证书与车险到期提醒小工具 - 分类筛选版</title>
+  <style>
+    :root {
+      --bg:#f6f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280;
+      --primary:#2563eb; --danger:#dc2626; --warning:#f59e0b; --success:#16a34a;
+      --border:#e5e7eb; --soft:#f3f4f6;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;color:var(--text)}
+    header{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;padding:28px 24px}
+    header h1{margin:0 0 8px;font-size:26px}
+    header p{margin:0;opacity:.92}
+    main{max-width:1460px;margin:0 auto;padding:20px}
+    .notice{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;color:#7c2d12}
+    .grid{display:grid;grid-template-columns:390px 1fr;gap:18px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 6px 20px rgba(15,23,42,.06);padding:18px}
+    h2{font-size:18px;margin:0 0 14px}
+    label{font-size:13px;color:var(--muted);display:block;margin:12px 0 6px}
+    input,select,textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;background:white}
+    textarea{min-height:78px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    button{border:0;border-radius:10px;padding:10px 13px;background:var(--primary);color:white;cursor:pointer;font-weight:600}
+    button.secondary{background:#4b5563}
+    button.ghost{background:var(--soft);color:var(--text)}
+    button.danger{background:var(--danger)}
+    button.success{background:var(--success)}
+    button.warning{background:var(--warning);color:#111827}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+    .tab{background:#eef2ff;color:#1e3a8a}
+    .tab.active{background:var(--primary);color:white}
+    .summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+    .summary div{background:#f9fafb;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .summary strong{font-size:22px;display:block}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+    .toolbar input,.toolbar select{width:auto;min-width:150px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border-bottom:1px solid var(--border);padding:10px 8px;text-align:left;vertical-align:top}
+    th{background:#f9fafb;color:#374151;position:sticky;top:0;z-index:1}
+    .table-wrap{max-height:690px;overflow:auto;border:1px solid var(--border);border-radius:12px}
+    .badge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:700;white-space:nowrap}
+    .cat{background:#ede9fe;color:#5b21b6}
+    .normal{background:#dcfce7;color:#166534}
+    .soon{background:#fef3c7;color:#92400e}
+    .done{background:#e0e7ff;color:#3730a3}
+    .expired{background:#fecaca;color:#7f1d1d}
+    .none{background:#f3f4f6;color:#374151}
+    .muted{color:var(--muted);font-size:12px;line-height:1.45}
+    .mini{font-size:12px;color:var(--muted)}
+    .hidden{display:none}
+    @media (max-width: 1000px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>资质证书 / 车险到期提醒小工具</h1>
+  <p>已导入：资质证书 148 条，车辆保险 11 条；本版已新增“资质类别”独立列与筛选。</p>
+</header>
+
+<main>
+  <div class="notice">
+    说明：资质类别来自资质 Excel 表第一列，例如软著、商标、专利、许可证等。车辆保险统一归入“车辆保险”类别。
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>新增 / 编辑事项</h2>
+      <input type="hidden" id="editId">
+
+      <label>分类板块</label>
+      <select id="section">
+        <option>资质证书</option>
+        <option>车辆保险</option>
+      </select>
+
+      <label>资质类别 / 保险类别</label>
+      <input id="certCategory" list="categoryList" placeholder="例如：软著 / 商标 / 许可证 / 车辆保险">
+      <datalist id="categoryList"></datalist>
+
+      <label>事项类型</label>
+      <select id="type">
+        <option>资质证书</option>
+        <option>车辆保险</option>
+        <option>合同</option>
+        <option>其他</option>
+      </select>
+
+      <label>主体公司</label>
+      <input id="company" placeholder="例如：聚客 / 云算力">
+
+      <label>事项名称</label>
+      <input id="name" placeholder="例如：营业执照 / 粤A12345商业险">
+
+      <div class="row">
+        <div>
+          <label>证书/保单/编号</label>
+          <input id="code" placeholder="可不填">
+        </div>
+        <div>
+          <label>负责人</label>
+          <input id="owner" placeholder="例如：行政主管">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>到期日</label>
+          <input id="expireDate" type="date">
+        </div>
+        <div>
+          <label>提前提醒天数</label>
+          <input id="remindDays" type="number" min="0" value="90">
+        </div>
+      </div>
+
+      <label>状态</label>
+      <select id="status">
+        <option>正常</option>
+        <option>续期中</option>
+        <option>已续期</option>
+        <option>已失效</option>
+        <option>已归档</option>
+        <option>长期/无到期</option>
+      </select>
+
+      <label>备注 / 续期材料 / 联系方式</label>
+      <textarea id="remark" placeholder="例如：续期要求、年审月份、保险公司、保单号等"></textarea>
+
+      <div class="actions">
+        <button onclick="saveItem()">保存事项</button>
+        <button class="ghost" onclick="resetForm()">清空</button>
+        <button class="warning" onclick="requestNotify()">开启浏览器提醒</button>
+      </div>
+
+      <hr style="border:0;border-top:1px solid var(--border);margin:18px 0">
+
+      <h2>数据备份</h2>
+      <div class="actions">
+        <button class="secondary" onclick="exportJSON()">导出JSON备份</button>
+        <button class="secondary" onclick="exportCSV()">导出CSV表格</button>
+        <button class="ghost" onclick="document.getElementById('importFile').click()">导入JSON</button>
+        <input id="importFile" class="hidden" type="file" accept=".json" onchange="importJSON(event)">
+        <button class="secondary" onclick="reloadInitialData()">恢复本次导入数据</button>
+        <button class="danger" onclick="clearAll()">清空全部数据</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="tabs">
+        <button id="tabAll" class="tab active" onclick="setSection('全部')">全部</button>
+        <button id="tabCert" class="tab" onclick="setSection('资质证书')">资质证书</button>
+        <button id="tabCar" class="tab" onclick="setSection('车辆保险')">车辆保险</button>
+      </div>
+
+      <div class="summary">
+        <div><strong id="countTotal">0</strong><span>当前筛选</span></div>
+        <div><strong id="countSoon">0</strong><span>临近提醒</span></div>
+        <div><strong id="countExpired">0</strong><span>已过期未处理</span></div>
+        <div><strong id="countNone">0</strong><span>长期/无到期</span></div>
+        <div><strong id="countDone">0</strong><span>已续期/归档</span></div>
+      </div>
+
+      <div class="toolbar">
+        <input id="keyword" placeholder="搜索主体/名称/编号/备注" oninput="render()">
+        <select id="filterCompany" onchange="render()"><option value="">全部主体</option></select>
+        <select id="filterCategory" onchange="render()"><option value="">全部资质类别</option></select>
+        <select id="filterStatus" onchange="render()">
+          <option value="">全部状态</option>
+          <option>正常</option>
+          <option>续期中</option>
+          <option>已续期</option>
+          <option>已失效</option>
+          <option>已归档</option>
+          <option>长期/无到期</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>状态</th>
+              <th>板块</th>
+              <th>资质类别</th>
+              <th>主体公司</th>
+              <th>事项名称</th>
+              <th>编号</th>
+              <th>到期日</th>
+              <th>提醒日</th>
+              <th>剩余</th>
+              <th>负责人</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <p class="mini">黄色=已到提醒期；红色=已到期未处理；灰色=长期/无到期；蓝色=已续期/归档。</p>
+    </section>
+  </div>
+</main>
+
+<script>
+const KEY = "cert_car_reminder_with_category_v3";
+const INITIAL_ITEMS = [
+  {
+    "id": "cert_云算力_1_1",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "存储证明的实现系统V1.0",
+    "code": "2018SR820873",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018/10/15",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.769969"
+  },
+  {
+    "id": "cert_云算力_2_2",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "高效共识机制设计软件V1.0",
+    "code": "2018SR817295",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018/10/15",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770065"
+  },
+  {
+    "id": "cert_云算力_3_3",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "高效容错的分布式存储网络设计软件V1.0",
+    "code": "2018SR820395",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018/10/15",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770127"
+  },
+  {
+    "id": "cert_云算力_4_4",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "个人借贷服务管理系统V1.0",
+    "code": "2018SR799913",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018/10/08",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770180"
+  },
+  {
+    "id": "cert_云算力_5_5",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "个人收益报表系统V1.0",
+    "code": "2018SR803694",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018/10/09",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770228"
+  },
+  {
+    "id": "cert_云算力_6_6",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "个人线上钱包管理系统V1.0",
+    "code": "2018SR810301",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018/10/11",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770301"
+  },
+  {
+    "id": "cert_云算力_7_7",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "标签防伪系统V1.0",
+    "code": "2020SR1022306",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2020/09/01",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770350"
+  },
+  {
+    "id": "cert_云算力_8_8",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "区块链艺术藏品管理系统V1.0",
+    "code": "2020SR1019086",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2020/09/01",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770383"
+  },
+  {
+    "id": "cert_云算力_9_9",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "数智广告屏后台管理系统V1.0",
+    "code": "2021SR1116728",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021/07/28",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770413"
+  },
+  {
+    "id": "cert_云算力_10_10",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "基于区块链技术的数据追溯系统V1.0",
+    "code": "2021SR1116654",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021/07/28",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770460"
+  },
+  {
+    "id": "cert_云算力_11_11",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "数字物品移动端交易系统V1.0",
+    "code": "2021SR1116729",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021/07/28",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770506"
+  },
+  {
+    "id": "cert_云算力_12_12",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "AdSmart智慧数字广告系统V1.0",
+    "code": "2021SR1116656",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021/07/28",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770581"
+  },
+  {
+    "id": "cert_云算力_13_13",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "挖矿易小程序V1.0",
+    "code": "2021SRA007384",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021/10/25",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770633"
+  },
+  {
+    "id": "cert_云算力_14_14",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "智能风险管理控制系统V1.0",
+    "code": "2021SR1116730",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021/07/28",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770675"
+  },
+  {
+    "id": "cert_云算力_15_15",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "盈富后台系统V1.0",
+    "code": "2021SR1806774",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021/11/19",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770710"
+  },
+  {
+    "id": "cert_云算力_16_16",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "项目管理系统V1.0",
+    "code": "2023SR0270427",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023/02/22",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770736"
+  },
+  {
+    "id": "cert_云算力_17_17",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "财务报表系统V1.0",
+    "code": "2023SR0302242",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023/03/06",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770757"
+  },
+  {
+    "id": "cert_云算力_18_18",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "人事管理系统V1.0",
+    "code": "2023SR0428326",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023/04/03",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770778"
+  },
+  {
+    "id": "cert_云算力_19_19",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "合伙人结算系统V1.0",
+    "code": "2023SR0378192",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023/03/21",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770819"
+  },
+  {
+    "id": "cert_云算力_20_20",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "少代会微官网系统V1.0",
+    "code": "2023SR0651084",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023/06/14",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770860"
+  },
+  {
+    "id": "cert_云算力_21_21",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "电子保函生产经营系统V1.0",
+    "code": "2023SR0896361",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023/08/04",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770887"
+  },
+  {
+    "id": "cert_云算力_22_22",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "商品营销计划管控系统V1.0",
+    "code": "2023SR1802106",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023/12/29",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770907"
+  },
+  {
+    "id": "cert_云算力_23_23",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "烟草烟叶生产调度管理系统V1.0",
+    "code": "2023SR0662073",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023/06/14",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770928"
+  },
+  {
+    "id": "cert_云算力_24_24",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "卡密商品生产库存管控系统V1.0",
+    "code": "2023SR1555828",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023/12/04",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770948"
+  },
+  {
+    "id": "cert_云算力_25_25",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "信息化财务报销系统V1.0",
+    "code": "2024SR0231520",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024/02/05",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770968"
+  },
+  {
+    "id": "cert_云算力_26_26",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "基于人工智能Paas服务的图片识别文字系统V1.0",
+    "code": "2024SR0279929",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024/02/19",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.770990"
+  },
+  {
+    "id": "cert_云算力_27_27",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "信息化财务报销系统V1.0",
+    "code": "2024SSR0277844",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024/02/19",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771011"
+  },
+  {
+    "id": "cert_云算力_28_28",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "基于人工智能图像识别的PDF二次处理系统V1.0",
+    "code": "2024SR0280501",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024/02/20",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771031"
+  },
+  {
+    "id": "cert_云算力_29_29",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "渠道结算管理系统V1.0",
+    "code": "2024SR0301796",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024/02/23",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771062"
+  },
+  {
+    "id": "cert_云算力_30_30",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "基于云服务架构的产品知识库管理系统V1.0",
+    "code": "2024SR0726254",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024/05/28",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771113"
+  },
+  {
+    "id": "cert_云算力_31_31",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "一种云部署的智能客服机器人交互系统V1.0",
+    "code": "2024SR0727456",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024/05/28",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771143"
+  },
+  {
+    "id": "cert_云算力_32_32",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "基于saas服务架构的仓储数据管理小程序系统V1.0",
+    "code": "2024SR1115318",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024/08/02",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771167"
+  },
+  {
+    "id": "cert_云算力_33_33",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "基于生成式语言大模型研发的企业内部考核试题智能生成系统",
+    "code": "2024SR2086975",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024/12/26",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771188"
+  },
+  {
+    "id": "cert_云算力_34_34",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "企业档案管理系统",
+    "code": "2025SR0157954",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/01/23",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771226"
+  },
+  {
+    "id": "cert_云算力_35_35",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "客服工单系统",
+    "code": "2025SR0171580",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/01/24",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771259"
+  },
+  {
+    "id": "cert_云算力_36_36",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "企业档案借阅管理系统",
+    "code": "2025SR0307598",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/02/21",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771279"
+  },
+  {
+    "id": "cert_云算力_37_37",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "企业资产管理系统",
+    "code": "2025SR0307620",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/02/21",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771298"
+  },
+  {
+    "id": "cert_云算力_38_38",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "供应链云仓账单操作费配置系统",
+    "code": "2025SR1000330",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/06/13",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771318"
+  },
+  {
+    "id": "cert_云算力_39_39",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "物流订单司机配送管理系统",
+    "code": "2025SR1429162",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/08/01",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771337"
+  },
+  {
+    "id": "cert_云算力_40_40",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "供应链云仓账单快递报价配置系统",
+    "code": "2025SR1433131",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/08/04",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771357"
+  },
+  {
+    "id": "cert_云算力_41_41",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "供应链云仓快递财务账单核算系统",
+    "code": "2025SR1462599",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/08/06",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771377"
+  },
+  {
+    "id": "cert_云算力_42_42",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作",
+    "company": "云算力",
+    "name": "供应链耗材费用管理系统",
+    "code": "2025SR2502758",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/12/26",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771398"
+  },
+  {
+    "id": "cert_云算力_43_43",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "发明专利",
+    "company": "云算力",
+    "name": "一种区块链系统的可视化方法及装置",
+    "code": "ZL 2020 1 0044822.5",
+    "owner": "行政主管",
+    "expireDate": "2040-04-20",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2020/04/21",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771433"
+  },
+  {
+    "id": "cert_云算力_44_44",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "发明专利",
+    "company": "云算力",
+    "name": "一种数据传输方法、相关装置以及基站",
+    "code": "ZL 2015 1 0641371.2",
+    "owner": "行政主管",
+    "expireDate": "2040-06-01",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2020/06/02",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771462"
+  },
+  {
+    "id": "cert_云算力_45_45",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "体系标准",
+    "company": "云算力",
+    "name": "ISO/IEC 27001:2022认证证书 信息安全管理体系",
+    "code": "04625I10264R0S",
+    "owner": "行政主管",
+    "expireDate": "2028-05-26",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2025/5/27-2028/5/26；到期提示：每年一次, 4月初开始准备",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771526"
+  },
+  {
+    "id": "cert_云算力_46_46",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "体系标准共3件",
+    "company": "云算力",
+    "name": "GB/T 19001-2016/ISO 9001:2015认证证书 质量管理体系",
+    "code": "04625Q11700R0S",
+    "owner": "行政主管",
+    "expireDate": "2028-05-26",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2025/5/7-2028/5/6；到期提示：每年一次, 4月初开始准备",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771571"
+  },
+  {
+    "id": "cert_云算力_47_47",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "体系标准共3件",
+    "company": "云算力",
+    "name": "ISO/IEC 20000-1:2018 信息技术管理体系",
+    "code": "0462025ITSM0030R0C",
+    "owner": "行政主管",
+    "expireDate": "2028-05-26",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2025/5/27-2028/5/26；到期提示：每年一次, 4月初开始准备",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771619"
+  },
+  {
+    "id": "cert_云算力_48_48",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "协会会员共2个",
+    "company": "云算力",
+    "name": "广州市区块链产业协会-理事单位",
+    "code": "GZBIA-0073",
+    "owner": "行政主管",
+    "expireDate": "2025-12-31",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2024/12/10-2025/12/31；到期提示：本年年底收邮件支付",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771659"
+  },
+  {
+    "id": "cert_云算力_49_49",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "协会会员共2个",
+    "company": "云算力",
+    "name": "广州市数字经济协会-理事单位",
+    "code": "GZDEA-0035",
+    "owner": "行政主管",
+    "expireDate": "2025-04-20",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2022/4/21-2025/4/20",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771703"
+  },
+  {
+    "id": "cert_云算力_50_50",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共2个",
+    "company": "云算力",
+    "name": "CLOUD COMPUTING POWER",
+    "code": "第32235372号",
+    "owner": "行政主管",
+    "expireDate": "2029-06-20",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2019/6/21-2029/6/20",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771738"
+  },
+  {
+    "id": "cert_云算力_51_51",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共2个",
+    "company": "云算力",
+    "name": "CLOUD COMPUTING POWER",
+    "code": "第32240070号",
+    "owner": "行政主管",
+    "expireDate": "2029-06-06",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2019/6/7-2029/6/6",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771771"
+  },
+  {
+    "id": "cert_云算力_52_52",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共4个",
+    "company": "云算力",
+    "name": "“专精特新”民营企业扶优计划培育企业",
+    "code": "-",
+    "owner": "行政主管",
+    "expireDate": "2027-11-01",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2022/11-2027/11",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771805"
+  },
+  {
+    "id": "cert_云算力_53_53",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共4个",
+    "company": "云算力",
+    "name": "高新技术企业证书",
+    "code": "GR202444002902",
+    "owner": "行政主管",
+    "expireDate": "2027-11-18",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2024/11/19-2027/11/18",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771856"
+  },
+  {
+    "id": "cert_云算力_54_54",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共4个",
+    "company": "云算力",
+    "name": "创新型中小企业",
+    "code": "-",
+    "owner": "行政主管",
+    "expireDate": "2025-12-19",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2022/12/20-2025/12/19；到期提示：与专精一齐做",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.771936"
+  },
+  {
+    "id": "cert_云算力_55_55",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共4个",
+    "company": "云算力",
+    "name": "专精特新中小企业",
+    "code": "-",
+    "owner": "行政主管",
+    "expireDate": "2026-01-17",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023/1/18-2026/1/17；到期提示：25年开始评估财务数据",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.772018"
+  },
+  {
+    "id": "cert_云算力_56_56",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "其他证书共3个",
+    "company": "云算力",
+    "name": "广东股权交易中心挂牌",
+    "code": "880526",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2020/11/13",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.772067"
+  },
+  {
+    "id": "cert_云算力_57_57",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "其他证书共3个",
+    "company": "云算力",
+    "name": "广州市区块链产业协会 认定证书",
+    "code": "",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025/12/31",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.772111"
+  },
+  {
+    "id": "cert_云算力_58_58",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "其他证书共3个",
+    "company": "云算力",
+    "name": "2024大湾区数字经济与区块链创新峰会：先锋企业",
+    "code": "",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2019/01/18",
+    "sourceSheet": "云算力",
+    "updatedAt": "2026-06-11T08:29:42.772152"
+  },
+  {
+    "id": "cert_聚客_1_59",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "促销管理系统V1.0",
+    "code": "2017SR074340",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2017-03-10",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779185"
+  },
+  {
+    "id": "cert_聚客_2_60",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "房价爬虫实时监控调度系统V1.0",
+    "code": "2017SR074511",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2017-03-10",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779210"
+  },
+  {
+    "id": "cert_聚客_3_61",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "积分管理爬虫实时监控系统V1.0",
+    "code": "2017SR074349",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2017-03-10",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779224"
+  },
+  {
+    "id": "cert_聚客_4_62",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "积分管理系统V1.0",
+    "code": "2017SR081037",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2017-03-16",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779236"
+  },
+  {
+    "id": "cert_聚客_5_63",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "酒店价格监控系统V1.0",
+    "code": "2017SR080806",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2017-03-16",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779247"
+  },
+  {
+    "id": "cert_聚客_6_64",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "酒店招投标系统V1.0",
+    "code": "2017SR081035",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2017-03-16",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779257"
+  },
+  {
+    "id": "cert_聚客_7_65",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "Planpoint手机应用软件V1.0",
+    "code": "2018SR016210",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018-01-08",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779267"
+  },
+  {
+    "id": "cert_聚客_8_66",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于CMS的OTA业务服务系统V1.0",
+    "code": "2018SR602813",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018-07-31",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779277"
+  },
+  {
+    "id": "cert_聚客_9_67",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于websocket技术的商城智能客服系统V1.0",
+    "code": "2018SR602398",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018-07-31",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779428"
+  },
+  {
+    "id": "cert_聚客_10_68",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于大数据分析的价值观智能分析系统V1.0",
+    "code": "2018SR602826",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018-07-31",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779460"
+  },
+  {
+    "id": "cert_聚客_11_69",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "商城后台管理系统V1.0",
+    "code": "2018SR016217",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018-01-08",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779472"
+  },
+  {
+    "id": "cert_聚客_12_70",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "微博实时监控系统V1.0",
+    "code": "2018SR016222",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2018-01-08",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779483"
+  },
+  {
+    "id": "cert_聚客_13_71",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "多惠点电子商城手机软件V2.1",
+    "code": "2019SRE016769",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2019-07-10",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779493"
+  },
+  {
+    "id": "cert_聚客_14_72",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "返现易购物手机软件V1.2",
+    "code": "2019SRE013273",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2019-05-07",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779504"
+  },
+  {
+    "id": "cert_聚客_15_73",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "返现易购物手机软件V2.0",
+    "code": "2021SRA006961",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-10-09",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779513"
+  },
+  {
+    "id": "cert_聚客_16_74",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "聚客管家SCRM系统V1.0",
+    "code": "2021SR1419411",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-09-23",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779523"
+  },
+  {
+    "id": "cert_聚客_17_75",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于Python的大数据库存监控系统V1.0",
+    "code": "2021SR0336116",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-03-04",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779533"
+  },
+  {
+    "id": "cert_聚客_18_76",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于大数据流技术的投票系统V1.0",
+    "code": "2021SR0336117",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-03-04",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779543"
+  },
+  {
+    "id": "cert_聚客_19_77",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "自媒体大数据采集分析系统V1.0",
+    "code": "2021SR05541446",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-04-15",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779553"
+  },
+  {
+    "id": "cert_聚客_20_78",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于canvas技术的性格分析系统V1.0",
+    "code": "2021SR0623461",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-04-29",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779564"
+  },
+  {
+    "id": "cert_聚客_21_79",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "差旅服务积分实时监控系统V2.0",
+    "code": "2021SR0783997",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-05-27",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779574"
+  },
+  {
+    "id": "cert_聚客_22_80",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "数智媒体信息发布系统V1.0",
+    "code": "2021SR0784182",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-05-27",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.779584"
+  },
+  {
+    "id": "cert_聚客_23_81",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "酒店房间价格实时查询系统V2.0",
+    "code": "2021SR0774984",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-05-27",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780766"
+  },
+  {
+    "id": "cert_聚客_24_82",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "差旅服务积分管理系统V2.0",
+    "code": "2021SR0774983",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-05-27",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780813"
+  },
+  {
+    "id": "cert_聚客_25_83",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "媒体信息录入管理系统V1.0",
+    "code": "2021SR0823761",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-06-02",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780830"
+  },
+  {
+    "id": "cert_聚客_26_84",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "媒体库后台管理系统V1.0",
+    "code": "2021SR0823763",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-06-02",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780841"
+  },
+  {
+    "id": "cert_聚客_27_85",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "差旅促销管理系统V2.0",
+    "code": "2021SR0794255",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-05-28",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780852"
+  },
+  {
+    "id": "cert_聚客_28_86",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "媒体信息实时监控系统V2.0",
+    "code": "2021SR0814707",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2021-06-02",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780864"
+  },
+  {
+    "id": "cert_聚客_29_87",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "返现易积分商城系统V1.0",
+    "code": "2022SR0232971",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2022-02-15",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780874"
+  },
+  {
+    "id": "cert_聚客_30_88",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "地推团队管理系统V1.0",
+    "code": "2022SR0839912",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2022-06-24",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780883"
+  },
+  {
+    "id": "cert_聚客_31_89",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "领功绩效结算系统V1.0",
+    "code": "2022SR1430891",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2022-10-28",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780893"
+  },
+  {
+    "id": "cert_聚客_32_90",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "领功地推业务系统V1.0",
+    "code": "2022SR1489345",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2022-11-10",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780903"
+  },
+  {
+    "id": "cert_聚客_33_91",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "领功财务报表系统V1.0",
+    "code": "2023SR0062749",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-01-11",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.780913"
+  },
+  {
+    "id": "cert_聚客_34_92",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "领功运营管理后台系统V1.0",
+    "code": "2023SR0109861",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-01-18",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.781015"
+  },
+  {
+    "id": "cert_聚客_35_93",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "领功团队管理后台系统V1.0",
+    "code": "2023SR0263056",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-02-20",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.781070"
+  },
+  {
+    "id": "cert_聚客_36_94",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "佣金管理系统V1.0",
+    "code": "2023SR0424270",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-03-31",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.781098"
+  },
+  {
+    "id": "cert_聚客_37_95",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "领功运营管理后台系统V2.0",
+    "code": "2023SR0869241",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-07-21",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782107"
+  },
+  {
+    "id": "cert_聚客_38_96",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "知识付费商城管理系统V1.0",
+    "code": "2023SR0866595",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-07-21",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782147"
+  },
+  {
+    "id": "cert_聚客_39_97",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "会员积分抽奖系统V1.0",
+    "code": "2023SR0851801",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-07-19",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782161"
+  },
+  {
+    "id": "cert_聚客_40_98",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "移动端电子商城系统V1.0",
+    "code": "2023SR1067946",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-09-14",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782173"
+  },
+  {
+    "id": "cert_聚客_41_99",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "移动端会员积分抽奖系统V1.0",
+    "code": "2023SR1067951",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-09-14",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782184"
+  },
+  {
+    "id": "cert_聚客_42_100",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "飞鸽IM即时社交聊天系统V1.0",
+    "code": "2023SR1461513",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2023-11-17",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782194"
+  },
+  {
+    "id": "cert_聚客_43_101",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "商家生产经营数据统计系统V1.0",
+    "code": "2024SR0151268",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-01-23",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782205"
+  },
+  {
+    "id": "cert_聚客_44_102",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于saas服务架构的商品分销系统V1.0",
+    "code": "2024SR0417951",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-03-21",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782215"
+  },
+  {
+    "id": "cert_聚客_45_103",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于saas服务架构的积分商品管理系统V1.0",
+    "code": "2024SR0418670",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-03-21",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782225"
+  },
+  {
+    "id": "cert_聚客_46_104",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "线下优惠券核销系统",
+    "code": "2024SR0765921",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-06-05",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782238"
+  },
+  {
+    "id": "cert_聚客_47_105",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "一种基于saas平台的数字优惠券管理系统",
+    "code": "2024SR0896399",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-06-28",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782248"
+  },
+  {
+    "id": "cert_聚客_48_106",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于微信小程序平台研发的生态农场数字化经营系统",
+    "code": "2024SR1336768",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-09-09",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782259"
+  },
+  {
+    "id": "cert_聚客_49_107",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于saas模式研发的线下门店销售业绩结算系统",
+    "code": "2024SR2047878",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-12-11",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782269"
+  },
+  {
+    "id": "cert_聚客_50_108",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于saas模式研发的线下销售业绩风控系统",
+    "code": "2024SR2045227",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-12-11",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782278"
+  },
+  {
+    "id": "cert_聚客_51_109",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "聚客联盟报价文件录入系统",
+    "code": "2025SR0148645",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-01-22",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782288"
+  },
+  {
+    "id": "cert_聚客_52_110",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "聚客管家公众号监测系统",
+    "code": "2025SR0180154",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-01-26",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782299"
+  },
+  {
+    "id": "cert_聚客_53_111",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "聚客管家平台媒体信息搜索系统",
+    "code": "2025SR0329222",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-02-25",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782309"
+  },
+  {
+    "id": "cert_聚客_54_112",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "基于联盟营销模式下的营销渠道管理系统",
+    "code": "2025SR0497028",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-03-21",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782319"
+  },
+  {
+    "id": "cert_聚客_55_113",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "PPT智能批量重构系统v1.0",
+    "code": "2025SR2120048",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-10-31",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782329"
+  },
+  {
+    "id": "cert_聚客_56_114",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "智能业绩数据洞察分析系统",
+    "code": "2025SR2120021",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-10-31",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782344"
+  },
+  {
+    "id": "cert_聚客_57_115",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "电商礼品卡智能管理系统V1.0",
+    "code": "2025SR2292507",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-11-27",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782354"
+  },
+  {
+    "id": "cert_聚客_58_116",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共52件",
+    "company": "聚客",
+    "name": "业财一体智能业绩数据分析系统v1.0",
+    "code": "2025SR2503286",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-12-26",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782365"
+  },
+  {
+    "id": "cert_聚客_59_117",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "协会会员共2个",
+    "company": "聚客",
+    "name": "中国青年企业家协会-会员",
+    "code": "",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782372"
+  },
+  {
+    "id": "cert_聚客_60_118",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "协会会员共2个",
+    "company": "聚客",
+    "name": "广州青年企业家协会-常务理事",
+    "code": "",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782379"
+  },
+  {
+    "id": "cert_聚客_61_119",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共9个",
+    "company": "聚客",
+    "name": "PLANPOINT",
+    "code": "17783766",
+    "owner": "行政主管",
+    "expireDate": "2026-10-13",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2016-10-14；到期提示：205",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782405"
+  },
+  {
+    "id": "cert_聚客_62_120",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共9个",
+    "company": "聚客",
+    "name": "赏点网",
+    "code": "17511193",
+    "owner": "行政主管",
+    "expireDate": "2026-09-20",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2016-09-21；到期提示：182",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782437"
+  },
+  {
+    "id": "cert_聚客_63_121",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共9个",
+    "company": "聚客",
+    "name": "蓝松鼠",
+    "code": "68533221",
+    "owner": "行政主管",
+    "expireDate": "2033-06-27",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-06-28；到期提示：2654",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782472"
+  },
+  {
+    "id": "cert_聚客_64_122",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共9个",
+    "company": "聚客",
+    "name": "蓝松鼠",
+    "code": "68565882",
+    "owner": "行政主管",
+    "expireDate": "2033-05-27",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-05-28；到期提示：2623",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782534"
+  },
+  {
+    "id": "cert_聚客_65_123",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共9个",
+    "company": "聚客",
+    "name": "蓝松鼠",
+    "code": "68551492",
+    "owner": "行政主管",
+    "expireDate": "2033-05-27",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-05-28；到期提示：2623",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782568"
+  },
+  {
+    "id": "cert_聚客_66_124",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共9个",
+    "company": "聚客",
+    "name": "领功",
+    "code": "65966632",
+    "owner": "行政主管",
+    "expireDate": "2033-05-06",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-05-07；到期提示：2602",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782585"
+  },
+  {
+    "id": "cert_聚客_67_125",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共9个",
+    "company": "聚客",
+    "name": "领功",
+    "code": "65963563",
+    "owner": "行政主管",
+    "expireDate": "2033-05-06",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-05-07；到期提示：2602",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782599"
+  },
+  {
+    "id": "cert_聚客_68_126",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共9个",
+    "company": "聚客",
+    "name": "领功",
+    "code": "65949453",
+    "owner": "行政主管",
+    "expireDate": "2033-01-20",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-01-21；到期提示：2496",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782614"
+  },
+  {
+    "id": "cert_聚客_69_127",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "商标共9个",
+    "company": "聚客",
+    "name": "领功",
+    "code": "65960437",
+    "owner": "行政主管",
+    "expireDate": "2033-05-06",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-05-07；到期提示：2602",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782628"
+  },
+  {
+    "id": "cert_聚客_70_128",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "人力资源许可证（正副本）",
+    "code": "（粤）人服证字[2022]第0105000823号",
+    "owner": "行政主管",
+    "expireDate": "2027-02-24",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2022-02-25；到期提示：339；备注：1-3月年审",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782644"
+  },
+  {
+    "id": "cert_聚客_71_129",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "增值电信业务经营许可证--信息服务业务  ICP",
+    "code": "粤B2-20210540",
+    "owner": "行政主管",
+    "expireDate": "2031-01-29",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2026-01-30；到期提示：1774；备注：换证, 提前100天",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782662"
+  },
+  {
+    "id": "cert_聚客_72_130",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "高新技术企业证书",
+    "code": "GR202444000675",
+    "owner": "行政主管",
+    "expireDate": "2027-11-18",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2024-11-19；到期提示：606",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782680"
+  },
+  {
+    "id": "cert_聚客_73_131",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "增值电信业务经营许可证--在线数据处理与交易处理业务  EDI",
+    "code": "粤B2-20210540",
+    "owner": "行政主管",
+    "expireDate": "2031-01-29",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2026-01-30；到期提示：1774；备注：换证, 提前100天",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782697"
+  },
+  {
+    "id": "cert_聚客_74_132",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "广播电视节目制作经营许可证",
+    "code": "（粤）字第05980号",
+    "owner": "行政主管",
+    "expireDate": "2027-03-24",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2025-03-25；到期提示：367；备注：2月",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782714"
+  },
+  {
+    "id": "cert_聚客_75_133",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "荣誉证书：新一代信息技术行业成长组优秀奖",
+    "code": "",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2022-11-01；到期提示：-",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782727"
+  },
+  {
+    "id": "cert_聚客_76_134",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "增值电信业务经营许可证--国内多方通信服务业务",
+    "code": "B2-20230967",
+    "owner": "行政主管",
+    "expireDate": "2027-03-24",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-03-17；到期提示：367；备注：1-3月年审",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782742"
+  },
+  {
+    "id": "cert_聚客_77_135",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "劳务派遣经营许可证（正副本）",
+    "code": "440105230016",
+    "owner": "行政主管",
+    "expireDate": "2026-05-09",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-05-10；到期提示：48；备注：换证, 提前咨询人社",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782756"
+  },
+  {
+    "id": "cert_聚客_78_136",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "专精特新中小企业",
+    "code": "",
+    "owner": "行政主管",
+    "expireDate": "2027-01-05",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2024-01-06；到期提示：289；备注：25年开始评估财务数据",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782770"
+  },
+  {
+    "id": "cert_聚客_79_137",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "科技型中小企业",
+    "code": "2025440105A8006908",
+    "owner": "行政主管",
+    "expireDate": "2025-12-31",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2025-09-01；到期提示：-81",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782784"
+  },
+  {
+    "id": "cert_聚客_80_138",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "高新技术企业证书",
+    "code": "GR202444000675",
+    "owner": "行政主管",
+    "expireDate": "2027-11-18",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2024-11-19；到期提示：606",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782798"
+  },
+  {
+    "id": "cert_聚客_81_139",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "企业证书共12个",
+    "company": "聚客",
+    "name": "2025年创新型中小企业",
+    "code": "",
+    "owner": "行政主管",
+    "expireDate": "2028-07-28",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2025-07-29；到期提示：859",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782812"
+  },
+  {
+    "id": "cert_聚客_82_140",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "体系标准共3个",
+    "company": "聚客",
+    "name": "ISO/IEC20000认证证书：信息技术服务管理体系",
+    "code": "2582024ITSM0321R0C",
+    "owner": "行政主管",
+    "expireDate": "2028-07-28",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2024-10-31；到期提示：859；备注：更换认证机构, 已取得9001证书, 其余2个待出证",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782826"
+  },
+  {
+    "id": "cert_聚客_83_141",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "体系标准共3个",
+    "company": "聚客",
+    "name": "ISO/IEC27001认证证书：信息安全管理体系",
+    "code": "258248ISR0067R0S",
+    "owner": "行政主管",
+    "expireDate": "2027-10-30",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2024-10-31；到期提示：587；备注：更换认证机构, 已取得9001证书, 其余2个待出证",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782841"
+  },
+  {
+    "id": "cert_聚客_84_142",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "体系标准共3个",
+    "company": "聚客",
+    "name": "质量管理体系认证证书（ISO9001）",
+    "code": "69724Q0156R0S",
+    "owner": "行政主管",
+    "expireDate": "2027-10-30",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2024-11-05；到期提示：587；备注：更换认证机构, 已取得9001证书, 其余2个待出证",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782855"
+  },
+  {
+    "id": "cert_聚客_85_143",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "其他证书共3个",
+    "company": "聚客",
+    "name": "作品登记证书-小松鼠系列",
+    "code": "粤作登字-2023-F-00029383",
+    "owner": "行政主管",
+    "expireDate": "2073-10-26",
+    "remindDays": 90,
+    "status": "正常",
+    "remark": "批准日期/有效期：2023-10-27；到期提示：-；备注：法人发起50年期限",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782872"
+  },
+  {
+    "id": "cert_聚客_86_144",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "其他证书共3个",
+    "company": "聚客",
+    "name": "中国旅行社协会：会员单位",
+    "code": "CATS21-05151",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-10-01；到期提示：8月年审",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782884"
+  },
+  {
+    "id": "cert_聚客_87_145",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "其他证书共3个",
+    "company": "聚客",
+    "name": "中国旅行社协会：会员单位",
+    "code": "2024 5102",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-10-01；到期提示：8月年审",
+    "sourceSheet": "聚客",
+    "updatedAt": "2026-06-11T08:29:42.782897"
+  },
+  {
+    "id": "cert_玉枕_1_146",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共2件",
+    "company": "玉枕",
+    "name": "地推佣金激励管理系统V1.0",
+    "code": "2025SR2000033",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-10-16",
+    "sourceSheet": "玉枕",
+    "updatedAt": "2026-06-11T08:29:42.794224"
+  },
+  {
+    "id": "cert_玉枕_2_147",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "软件著作共2件",
+    "company": "玉枕",
+    "name": "业绩达量激励管理系统V1.0",
+    "code": "2025SR2000028",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2025-10-16",
+    "sourceSheet": "玉枕",
+    "updatedAt": "2026-06-11T08:29:42.794274"
+  },
+  {
+    "id": "cert_聚客中国_1_148",
+    "section": "资质证书",
+    "type": "资质证书",
+    "certCategory": "其他证书共1个",
+    "company": "聚客中国",
+    "name": "澳门互联网创新投资协会委任状-副理事长单位",
+    "code": "",
+    "owner": "行政主管",
+    "expireDate": "",
+    "remindDays": 0,
+    "status": "长期/无到期",
+    "remark": "批准日期/有效期：2024-02-28",
+    "sourceSheet": "聚客中国",
+    "updatedAt": "2026-06-11T08:29:42.799695"
+  },
+  {
+    "id": "car_001",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "聚客",
+    "name": "粤A41D1N｜综合险",
+    "code": "粤A41D1N",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2026-12-22",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国太平洋财产保险股份有限公司广东分公司；保单号：AGUZ121Y2025B233703D",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800445"
+  },
+  {
+    "id": "car_002",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "聚客",
+    "name": "粤A41D1N｜交强险",
+    "code": "粤A41D1N",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2026-12-22",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国太平洋财产保险股份有限公司广东分公司；保单号：AGUZ121CTP25B352733R",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800463"
+  },
+  {
+    "id": "car_003",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "聚客",
+    "name": "粤A41D1N｜商业险",
+    "code": "粤A41D1N",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2026-12-22",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国太平洋财产保险股份有限公司；保单号：AGUZ4L0CTP25F0036NXE",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800472"
+  },
+  {
+    "id": "car_004",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "聚客",
+    "name": "粤A65N2T｜EBS等（驾乘险）",
+    "code": "粤A65N2T",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2026-10-08",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国人民财产保险股份有限公司广州市分公司；保单号：TEBS202544010003381469",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800479"
+  },
+  {
+    "id": "car_005",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "聚客",
+    "name": "粤A65N2T｜交强险",
+    "code": "粤A65N2T",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2026-10-08",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国人民财产保险股份有限公司广州市分公司；保单号：TDAA202544010004758828",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800487"
+  },
+  {
+    "id": "car_006",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "聚客",
+    "name": "粤A65N2T｜商业险",
+    "code": "粤A65N2T",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2026-09-28",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国人民财产保险股份有限公司广州市分公司；保单号：TDZA202544010004644383",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800495"
+  },
+  {
+    "id": "car_007",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "云算力",
+    "name": "粤ACZ8879｜EBS等（驾乘险）",
+    "code": "粤ACZ8879",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2027-01-11",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国平安财产保险股份有限公司；保单号：504011666Z4035786182",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800503"
+  },
+  {
+    "id": "car_008",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "云算力",
+    "name": "粤ACZ8879｜交强险",
+    "code": "粤ACZ8879",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2027-01-11",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国平安财产保险股份有限公司；保单号：50401163904035786184",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800509"
+  },
+  {
+    "id": "car_009",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "云算力",
+    "name": "粤ACZ8879｜商业险",
+    "code": "粤ACZ8879",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2027-01-11",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国平安财产保险股份有限公司；保单号：50401163904035786183",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800525"
+  },
+  {
+    "id": "car_010",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "聚客",
+    "name": "粤ACS2148｜交强险",
+    "code": "粤ACS2148",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2027-01-09",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国平安财产保险股份有限公司；保单号：10436003903272336576",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800541"
+  },
+  {
+    "id": "car_011",
+    "section": "车辆保险",
+    "type": "车辆保险",
+    "certCategory": "车辆保险",
+    "company": "聚客",
+    "name": "粤ACS2148｜商业险",
+    "code": "粤ACS2148",
+    "owner": "劳琪琦,陈晓筠",
+    "expireDate": "2027-01-09",
+    "remindDays": 30,
+    "status": "正常",
+    "remark": "保险公司：中国平安财产保险股份有限公司；保单号：10436003903272336575",
+    "sourceSheet": "车险",
+    "updatedAt": "2026-06-11T08:29:42.800554"
+  }
+];
+const INITIAL_CATEGORIES = ["企业证书共12个", "企业证书共4个", "体系标准", "体系标准共3个", "体系标准共3件", "其他证书共1个", "其他证书共3个", "协会会员共2个", "发明专利", "商标共2个", "商标共9个", "软件著作", "软件著作共2件", "软件著作共52件"];
+let currentSection = "全部";
+
+function loadItems(){ return JSON.parse(localStorage.getItem(KEY) || "[]"); }
+function saveItems(items){ localStorage.setItem(KEY, JSON.stringify(items)); }
+function initializeData(){
+  if(loadItems().length === 0) saveItems(INITIAL_ITEMS);
+  refreshOptions();
+}
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function addDays(dateStr, days){
+  if(!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  if(isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0,10);
+}
+function daysBetween(a,b){
+  if(!a) return null;
+  const d1 = new Date(a + "T00:00:00");
+  const d2 = new Date(b + "T00:00:00");
+  if(isNaN(d1.getTime())) return null;
+  return Math.ceil((d1 - d2) / (1000*60*60*24));
+}
+function remindDate(item){ return item.expireDate ? addDays(item.expireDate, -Number(item.remindDays || 0)) : ""; }
+function isClosed(item){ return ["已续期","已归档"].includes(item.status); }
+function isNoExpire(item){ return !item.expireDate || item.status === "长期/无到期"; }
+
+function level(item){
+  if(isClosed(item)) return "done";
+  if(isNoExpire(item)) return "none";
+  const left = daysBetween(item.expireDate, todayStr());
+  if(left !== null && left < 0) return "expired";
+  if(todayStr() >= remindDate(item)) return "soon";
+  return "normal";
+}
+function levelText(item){
+  const lv = level(item);
+  if(lv === "done") return item.status;
+  if(lv === "none") return "无到期";
+  if(lv === "expired") return "已过期";
+  if(lv === "soon") return "需关注";
+  return "正常";
+}
+
+function setSection(sec){
+  currentSection = sec;
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  if(sec === "全部") document.getElementById("tabAll").classList.add("active");
+  if(sec === "资质证书") document.getElementById("tabCert").classList.add("active");
+  if(sec === "车辆保险") document.getElementById("tabCar").classList.add("active");
+  render();
+}
+
+function refreshOptions(){
+  const items = loadItems();
+  const companies = [...new Set(items.map(x => x.company).filter(Boolean))].sort();
+  const categories = [...new Set(items.map(x => x.certCategory || "未分类").filter(Boolean))].sort();
+
+  const companySelect = document.getElementById("filterCompany");
+  const oldCompany = companySelect.value;
+  companySelect.innerHTML = '<option value="">全部主体</option>' + companies.map(c => `<option>${c}</option>`).join("");
+  companySelect.value = companies.includes(oldCompany) ? oldCompany : "";
+
+  const catSelect = document.getElementById("filterCategory");
+  const oldCat = catSelect.value;
+  catSelect.innerHTML = '<option value="">全部资质类别</option>' + categories.map(c => `<option>${c}</option>`).join("");
+  catSelect.value = categories.includes(oldCat) ? oldCat : "";
+
+  const list = document.getElementById("categoryList");
+  list.innerHTML = categories.map(c => `<option value="${c}"></option>`).join("");
+}
+
+function saveItem(){
+  const item = {
+    id: document.getElementById("editId").value || Date.now().toString(),
+    section: document.getElementById("section").value,
+    type: document.getElementById("type").value,
+    certCategory: document.getElementById("certCategory").value.trim() || "未分类",
+    company: document.getElementById("company").value.trim(),
+    name: document.getElementById("name").value.trim(),
+    code: document.getElementById("code").value.trim(),
+    owner: document.getElementById("owner").value.trim(),
+    expireDate: document.getElementById("expireDate").value,
+    remindDays: Number(document.getElementById("remindDays").value || 0),
+    status: document.getElementById("status").value,
+    remark: document.getElementById("remark").value.trim(),
+    sourceSheet: "手动新增",
+    updatedAt: new Date().toISOString()
+  };
+  if(!item.company || !item.name){
+    alert("请至少填写：主体公司、事项名称。");
+    return;
+  }
+  if(!item.expireDate && item.status !== "长期/无到期") item.status = "长期/无到期";
+  const items = loadItems();
+  const idx = items.findIndex(x => x.id === item.id);
+  if(idx >= 0) items[idx] = item; else items.push(item);
+  saveItems(items);
+  resetForm();
+  refreshOptions();
+  render();
+}
+
+function resetForm(){
+  ["editId","company","name","code","owner","expireDate","remark","certCategory"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("section").value = "资质证书";
+  document.getElementById("type").value = "资质证书";
+  document.getElementById("remindDays").value = 90;
+  document.getElementById("status").value = "正常";
+}
+
+function editItem(id){
+  const item = loadItems().find(x => x.id === id);
+  if(!item) return;
+  document.getElementById("editId").value = item.id;
+  document.getElementById("section").value = item.section || "资质证书";
+  document.getElementById("type").value = item.type || "资质证书";
+  document.getElementById("certCategory").value = item.certCategory || "";
+  document.getElementById("company").value = item.company || "";
+  document.getElementById("name").value = item.name || "";
+  document.getElementById("code").value = item.code || "";
+  document.getElementById("owner").value = item.owner || "";
+  document.getElementById("expireDate").value = item.expireDate || "";
+  document.getElementById("remindDays").value = item.remindDays ?? 90;
+  document.getElementById("status").value = item.status || "正常";
+  document.getElementById("remark").value = item.remark || "";
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function deleteItem(id){
+  if(!confirm("确认删除该事项吗？")) return;
+  saveItems(loadItems().filter(x => x.id !== id));
+  refreshOptions();
+  render();
+}
+
+function markDone(id){
+  const items = loadItems();
+  const item = items.find(x => x.id === id);
+  if(item){
+    item.status = "已续期";
+    item.updatedAt = new Date().toISOString();
+    saveItems(items);
+    render();
+  }
+}
+
+function filteredItems(){
+  const kw = document.getElementById("keyword").value.trim().toLowerCase();
+  const fc = document.getElementById("filterCompany").value;
+  const fcat = document.getElementById("filterCategory").value;
+  const fs = document.getElementById("filterStatus").value;
+  return loadItems().filter(x => {
+    const secOk = currentSection === "全部" || x.section === currentSection;
+    const kwOk = !kw || [x.company,x.name,x.code,x.owner,x.remark,x.sourceSheet,x.certCategory].join(" ").toLowerCase().includes(kw);
+    const cOk = !fc || x.company === fc;
+    const catOk = !fcat || (x.certCategory || "未分类") === fcat;
+    const sOk = !fs || x.status === fs;
+    return secOk && kwOk && cOk && catOk && sOk;
+  }).sort((a,b) => {
+    if(!a.expireDate && b.expireDate) return 1;
+    if(a.expireDate && !b.expireDate) return -1;
+    return new Date(a.expireDate || "2999-12-31") - new Date(b.expireDate || "2999-12-31");
+  });
+}
+
+function render(){
+  const items = filteredItems();
+  document.getElementById("countTotal").textContent = items.length;
+  document.getElementById("countSoon").textContent = items.filter(x => level(x)==="soon").length;
+  document.getElementById("countExpired").textContent = items.filter(x => level(x)==="expired").length;
+  document.getElementById("countNone").textContent = items.filter(x => level(x)==="none").length;
+  document.getElementById("countDone").textContent = items.filter(x => level(x)==="done").length;
+
+  document.getElementById("tbody").innerHTML = items.map(x => {
+    const lv = level(x);
+    const left = daysBetween(x.expireDate, todayStr());
+    const leftText = isClosed(x) || isNoExpire(x) ? "-" : (left < 0 ? `超期 ${Math.abs(left)} 天` : `${left} 天`);
+    return `<tr>
+      <td><span class="badge ${lv}">${levelText(x)}</span></td>
+      <td>${x.section || ""}</td>
+      <td><span class="badge cat">${x.certCategory || "未分类"}</span></td>
+      <td>${x.company || ""}</td>
+      <td><strong>${x.name || ""}</strong><br><span class="muted">${x.remark || ""}</span></td>
+      <td>${x.code || ""}</td>
+      <td>${x.expireDate || "长期/无到期"}</td>
+      <td>${remindDate(x) || "-"}</td>
+      <td>${leftText}</td>
+      <td>${x.owner || ""}</td>
+      <td>
+        <button class="ghost" onclick="editItem('${x.id}')">编辑</button>
+        <button class="success" onclick="markDone('${x.id}')">已续期</button>
+        <button class="danger" onclick="deleteItem('${x.id}')">删除</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  checkNotifications();
+}
+
+function requestNotify(){
+  if(!("Notification" in window)){
+    alert("当前浏览器不支持通知。");
+    return;
+  }
+  Notification.requestPermission().then(p => {
+    alert(p === "granted" ? "已开启浏览器通知。页面打开时，如有到期事项会提醒。" : "未开启通知权限。");
+  });
+}
+
+function checkNotifications(){
+  if(!("Notification" in window) || Notification.permission !== "granted") return;
+  const today = todayStr();
+  const notifiedKey = "cert_car_category_reminder_notified_" + today;
+  const notified = JSON.parse(localStorage.getItem(notifiedKey) || "[]");
+  const dueItems = loadItems().filter(x => !isClosed(x) && !isNoExpire(x) && ["soon","expired"].includes(level(x)) && !notified.includes(x.id));
+  dueItems.slice(0,8).forEach(x => {
+    new Notification("到期提醒", {
+      body: `${x.section}｜${x.certCategory || ""}｜${x.company}｜${x.name}｜到期日：${x.expireDate}`
+    });
+    notified.push(x.id);
+  });
+  localStorage.setItem(notifiedKey, JSON.stringify(notified));
+}
+
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(loadItems(), null, 2)], {type:"application/json;charset=utf-8"});
+  downloadBlob(blob, "资质证书车险提醒备份_含资质类别.json");
+}
+function exportCSV(){
+  const headers = ["板块","事项类型","资质类别","主体公司","事项名称","编号","负责人","到期日","提前提醒天数","提醒日期","状态","来源表","备注"];
+  const rows = loadItems().map(x => [x.section,x.type,x.certCategory,x.company,x.name,x.code,x.owner,x.expireDate,x.remindDays,remindDate(x),x.status,x.sourceSheet,x.remark]);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? "").replaceAll('"','""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\ufeff" + csv], {type:"text/csv;charset=utf-8"});
+  downloadBlob(blob, "资质证书车险提醒台账_含资质类别.csv");
+}
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+function importJSON(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if(!Array.isArray(data)) throw new Error("格式错误");
+      saveItems(data);
+      refreshOptions();
+      render();
+      alert("导入成功。");
+    }catch(err){
+      alert("导入失败，请确认是本工具导出的 JSON 文件。");
+    }
+  };
+  reader.readAsText(file);
+}
+function reloadInitialData(){
+  if(confirm("确认用本次导入的全部资质证书和车险数据覆盖当前数据吗？")){
+    saveItems(INITIAL_ITEMS);
+    refreshOptions();
+    render();
+  }
+}
+function clearAll(){
+  if(confirm("确认清空全部数据吗？请先导出备份。")){
+    localStorage.removeItem(KEY);
+    refreshOptions();
+    render();
+  }
+}
+
+initializeData();
+setInterval(render, 60 * 1000);
+render();
+</script>
+</body>
+</html>
